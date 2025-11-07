@@ -1,0 +1,72 @@
+1. Install Security Onion 2.3.300 with the link 
+https://download.securityonion.net/file/securityonion/securityonion-2.3.300-20240401.iso
+but if you can't find that version, contact me
+2. Install Velociraptor Linux v0.6.5-2 run on Security Onion like a Server, and Velociraptor Windows v0.6.5-2 to add it like a client:
+https://github.com/Velocidex/velociraptor/releases/tag/v0.6.5-0
+3. Setup Environment to Install: 
+With Security Onion:
+sudo mkdir -p /opt/so/conf/velociraptor
+cd /opt/so/conf/velociraptor
+
+Install Go: 
+sudo wget https://go.dev/dl/go1.22.2.linux-amd64.tar.gz
+sudo rm -rf /usr/local/go
+sudo tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz
+echo 'export PATH=$PATH:/usr/local/go/bin' | sudo tee /etc/profile.d/go.sh
+source /etc/profile.d/go.sh
+
+4. Install Velociraptor and Config:  
+cd /usr/local/bin
+sudo curl -L -o velociraptor https://github.com/Velocidex/velociraptor/releases/download/v0.6.5-0/velociraptor-v0.6.5-2-linux-amd64
+sudo chmod +x velociraptor
+velociraptor version
+
+Generate Server Config: 
+cd /opt/so/conf/velociraptor
+sudo velociraptor config generate -i
+
+after generate, we have 2 files: 
+server.config.yaml
+client.config.yaml
+
+5. Test and generate certificates: 
+Velociraptor automatically generates key/cert in /opt/so/conf/velociraptor
+
+Command to get it manually: 
+sudo /usr/local/bin/velociraptor --config /opt/so/conf/velociraptor/server.config.yaml config generate_keys
+
+6. Run foreground server to test:
+sudo /usr/local/bin/velociraptor --config /opt/so/conf/velociraptor/server.config.yaml frontend -v
+
+Open firewall: 
+sudo firewall-cmd --add-port=8000/tcp --add-port=8889/tcp --permanent
+sudo firewall-cmd --reload
+
+Access GUI: 
+https://<IP Security Onion>:8889/
+
+7. Pick Windows Client: 
+Generate directory: 
+
+sudo mkdir -p /opt/so/conf/velociraptor/bin
+cd /opt/so/conf/velociraptor/bin
+
+Install Windows Agent: 
+sudo curl -L -o velociraptor-v0.6.5-2-windows-amd64.exe \
+https://github.com/Velocidex/velociraptor/releases/download/v0.6.5-0/velociraptor-v0.6.5-2-windows-amd64.exe
+
+Make Windows Agent into repacked file, which attached config client:
+cd /opt/so/conf/velociraptor
+sudo /usr/local/bin/velociraptor --config server.config.yaml config repack \
+  ./bin/velociraptor-v0.6.5-2-windows-amd64.exe ./client.config.yaml ./bin/velociraptor-v0.6.5-2-windows-repacked.exe
+
+and send Windows repacked agent file, client.config.yaml file to Windows Endpoints, and you should rename Velociraptor Agent file to velociraptor.exe
+
+8. Build Environment and setup Services on Windows Agent to make it startup with agent every rebooting:
+- Make a directory: C:\Program Files\Velociraptor with a file velociraptor.writeback.yaml
+- Run list commands to start Velociraptor service: 
+cmd /c 'sc create Velociraptor binPath= "\"C:\Program Files\Velociraptor\velociraptor.exe\" service run --config \"C:\Program Files\Velociraptor\client.config.yaml\"" start= delayed-auto DisplayName= "Velociraptor"'
+
+
+
+
